@@ -1,0 +1,14 @@
+Description=Album Bot
+After=network.target
+# root is bad for security :(
+# need to fix
+[Service]
+User=root
+Group=root
+
+WorkingDirectory=/home/gena/album_bot/
+Environment="PYTHONPATH=/home/gena/album_bot/"
+ExecStart=/usr/bin/python3.6 /home/gena/album_bot/bot_logic_album.py
+
+[Install]
+WantedBy=multi-user.target
