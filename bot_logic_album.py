@@ -169,6 +169,7 @@ class VKAlbumSearcher:
         # append to final message if find
         # append to repeats list if find to not repeat comments
         counter = 1
+        ar = '⏩'.encode('utf-8')
         for word in self.words:
             for comment, url in self.comments.items():
                 r = re.findall(f'{word}', comment)
@@ -176,7 +177,7 @@ class VKAlbumSearcher:
                     if len(final_message) > 25:
                         final_message = [("Комментариев слишком много (больше 20), попробуйте сузить запрос.")]
                         return final_message
-                    final_message.append(f"⏩ {counter}:\n📌 Запрос: {word}\n💬 Текст: {str(comment)}\n📎 Url: {str(url)}\n\n")
+                    final_message.append(f"{ar}  {counter}:\n{ar}  Запрос: {word}\n{ar} Текст: {str(comment)}\n{ar} Url: {str(url)}\n\n")
                     self.repeats.append(comment)
                     counter += 1
 
