@@ -3,18 +3,28 @@ from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 import re
 import time
 import configparser
+# init config
 config = configparser.ConfigParser()
 config.sections()
 config.read('config.ini')
-# Levenstein algorithm
-# from fuzzywuzzy import fuzz
 
+def auth_handler():
+    #t wo factor auth
+    key = input("Enter authentication code: ")
+    remember_device = True
+    return key, remember_device
+
+# Album Bot group and token
 GROUP = -6923031
 TOKEN_GROUP = config['TOKEN']['TOKEN_GROUP']
-TOKEN_USER = config['TOKEN']['TOKEN_USER']
+
+# Vk admin login
+PASS = config['AUTH']['PASS']
 LOGIN = config['AUTH']['LOGIN']
-vk_admin = vk_api.VkApi(login=LOGIN, token=TOKEN_USER)
-vk_admin.auth(token_only=True)
+
+# Vk admin auth
+vk_admin = vk_api.VkApi(login=LOGIN, password=PASS, auth_handler=auth_handler)
+vk_admin.auth()
 vk = vk_admin.get_api()
 
 # longpoll auth
@@ -22,6 +32,8 @@ vk_group = vk_api.VkApi(token=TOKEN_GROUP)
 vk_group_bot = vk_group.get_api()
 longpoll = VkBotLongPoll(vk_group, 199772710)
 
+
+# main class of comment searcher
 class VKAlbumSearcher:
 
     def __init__(self, query_string, event):
@@ -39,6 +51,7 @@ class VKAlbumSearcher:
 
         splitted_query_string = self.query_string.split()
 
+        # must be 2 words in query: "url query"
         if len(splitted_query_string) < 2:
             vk_group_bot.messages.send(
                 user_id=self.event.obj.from_id,
@@ -48,14 +61,16 @@ class VKAlbumSearcher:
             )
             raise ValueError("Split failed")
 
+        # get url from query
         self.url = splitted_query_string[0]
 
+        # get query words from query
         for i in range(1, len(splitted_query_string)):
             self.words.append(splitted_query_string[i])
 
-        print("String: ", self.query_string, '\n',
-              "Url: ", self.url, '\n',
-              "Word: ", self.words, '\n')
+        # print("String: ", self.query_string, '\n',
+        #       "Url: ", self.url, '\n',
+        #       "Word: ", self.words, '\n')
 
     def find_group_and_album_url(self):
 
@@ -79,8 +94,8 @@ class VKAlbumSearcher:
         self.group = re_group_and_album_parts.groups()[0]
         self.album = re_group_and_album_parts.groups()[1]
 
-        print("Group: ", self.group, '\n',
-              "Album: ", self.album, '\n')
+        # print("Group: ", self.group, '\n',
+        #       "Album: ", self.album, '\n')
 
     def get_album_comments(self):
 
@@ -100,6 +115,7 @@ class VKAlbumSearcher:
         tools = vk_api.VkTools(vk)
         response = {}
 
+        # main request from vk.com API
         try:
             response = tools.get_all('photos.getAllComments', 100, {'owner_id': group_id, 'album_id': album_id})
         except Exception as e:
@@ -121,22 +137,24 @@ class VKAlbumSearcher:
             )
             raise ValueError("Response is empty")
 
+        # parse comments from json response
         result_dict = {}
         for i in response['items']:
             result_dict[i['text'].lower()] = "https://vk.com/photo-" + str(self.group)\
                                            + '_' + str(i['pid'])
 
-        for j in result_dict.items():
-            print(j)
+        # for j in result_dict.items():
+        #     print(j)
 
         self.comments = result_dict
-
-    def check_len(self, string):
-        return len(string) < 4095
 
     def find_in_comments(self):
 
         final_message = []
+
+        # find query words in response comments
+        # append to final message if find
+        # append to repeats list if find to not repeat comments
         for word in self.words:
             for comment, url in self.comments.items():
                 r = re.findall(f'{word}', comment)
@@ -147,6 +165,7 @@ class VKAlbumSearcher:
                     final_message.append(f"Запрос: {word}\nТекст: {str(comment)}\nUrl: {str(url)}\n\n")
                     self.repeats.append(comment)
 
+        # check if empty
         if len(final_message) < 1:
             tmp = ''
             for word in self.words:
@@ -155,24 +174,27 @@ class VKAlbumSearcher:
 
         return final_message
 
-
     def find(self):
+
+        # main function
         self.split_url()
         self.find_group_and_album_url()
         self.get_album_comments()
         return self.find_in_comments()
 
-
+# check if url contains "album"
 def is_url_valid(url):
     r = re.search(r'album', url)
     return r
 
-
+# longpoll vk listener loop
 def listen():
 
     for event in longpoll.listen():
         if event.type == VkBotEventType.MESSAGE_NEW:
             if is_url_valid(event.obj.text):
+
+                # create searcher object and call main func
                 searcher = VKAlbumSearcher(str(event.obj.text).lower(), event)
                 msg = searcher.find()
                 for i in msg:
