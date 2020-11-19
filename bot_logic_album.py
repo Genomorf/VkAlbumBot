@@ -68,9 +68,9 @@ class VKAlbumSearcher:
         for i in range(1, len(splitted_query_string)):
             self.words.append(splitted_query_string[i])
 
-        # print("String: ", self.query_string, '\n',
-        #       "Url: ", self.url, '\n',
-        #       "Word: ", self.words, '\n')
+        print("String: ", self.query_string, '\n',
+              "Url: ", self.url, '\n',
+              "Word: ", self.words, '\n')
 
     def find_group_and_album_url(self):
 
@@ -94,8 +94,8 @@ class VKAlbumSearcher:
         self.group = re_group_and_album_parts.groups()[0]
         self.album = re_group_and_album_parts.groups()[1]
 
-        # print("Group: ", self.group, '\n',
-        #       "Album: ", self.album, '\n')
+        print("Group: ", self.group, '\n',
+              "Album: ", self.album, '\n')
 
     def get_album_comments(self):
 
@@ -117,7 +117,8 @@ class VKAlbumSearcher:
 
         # main request from vk.com API
         try:
-            response = tools.get_all('photos.getAllComments', 100, {'owner_id': group_id, 'album_id': album_id})
+            response_part_1 = tools.get_all_iter(method='photos.getAllComments', max_count=100, values={'owner_id': group_id, 'album_id': album_id})
+            response_part_2 = vk.photos.get(owner_id=group_id, album_id=album_id, count=900)
         except Exception as e:
             vk_group_bot.messages.send(
                 user_id=self.event.obj.from_id,
@@ -126,9 +127,21 @@ class VKAlbumSearcher:
                 message="Не удалось получить комментарии к альбому."
             )
             raise ValueError("Get album comments failed with: ", e)
+        response = {}
+        for i in response_part_1:
+            response[" \"" + i['text'].lower() + "\" "] = "https://vk.com/photo-" + str(self.group)\
+                                            + '_' + str(i['pid'])
+        for i in response_part_2['items']:
+            response[" \"" + i['text'].lower() + "\" "] = "https://vk.com/photo-" + str(self.group)\
+                                            + '_' + str(i['id'])
+        # c = 1
+        # for i in response_part_2['items']:
+        #     print(c, ": ", i)
+        #     c += 1
 
+        #print(len(response))
         # check if response is empty
-        if len(response['items']) < 1:
+        if len(response) < 1:
             vk_group_bot.messages.send(
                 user_id=self.event.obj.from_id,
                 random_id=self.event.obj.random_id,
@@ -138,15 +151,15 @@ class VKAlbumSearcher:
             raise ValueError("Response is empty")
 
         # parse comments from json response
-        result_dict = {}
-        for i in response['items']:
-            result_dict[i['text'].lower()] = "https://vk.com/photo-" + str(self.group)\
-                                           + '_' + str(i['pid'])
+        # result_dict = {}
+        # for i in response:
+        #     result_dict[i['text'].lower()] = "https://vk.com/photo-" + str(self.group)\
+        #                                    + '_' + str(i['pid'])
 
         # for j in result_dict.items():
         #     print(j)
 
-        self.comments = result_dict
+        self.comments = response
 
     def find_in_comments(self):
 
@@ -155,15 +168,17 @@ class VKAlbumSearcher:
         # find query words in response comments
         # append to final message if find
         # append to repeats list if find to not repeat comments
+        counter = 1
         for word in self.words:
             for comment, url in self.comments.items():
                 r = re.findall(f'{word}', comment)
                 if r and (comment not in self.repeats):
-                    if len(final_message) > 20:
+                    if len(final_message) > 25:
                         final_message = [("Комментариев слишком много (больше 20), попробуйте сузить запрос.")]
                         return final_message
-                    final_message.append(f"Запрос: {word}\nТекст: {str(comment)}\nUrl: {str(url)}\n\n")
+                    final_message.append(f"⏩ {counter}:\n📌 Запрос: {word}\n💬 Текст: {str(comment)}\n📎 Url: {str(url)}\n\n")
                     self.repeats.append(comment)
+                    counter += 1
 
         # check if empty
         if len(final_message) < 1:
