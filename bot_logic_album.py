@@ -170,7 +170,7 @@ class VKAlbumSearcher:
         # append to final message if find
         # append to repeats list if find to not repeat comments
         counter = 1
-        ar = '⏩'.encode('ascii', 'ignore').decode('ascii')
+        ar = '⏩'.encode('utf-8', 'ignore').decode('utf-8')
         for word in self.words:
             for comment, url in self.comments.items():
                 r = re.findall(f'{word}', comment)
