@@ -6,9 +6,9 @@ After=network.target
 User=root
 Group=root
 
-WorkingDirectory=/home/gena/album_bot/
-Environment="PYTHONPATH=/home/gena/album_bot/"
-ExecStart=/usr/bin/python3.6 /home/gena/album_bot/bot_logic_album.py
+WorkingDirectory=/home/gena/album_bot/VkAlbumBot
+Environment="PYTHONPATH=/home/gena/album_bot/VkAlbumBot"
+ExecStart=/usr/bin/python3.6 /home/gena/album_bot/VkAlbumBot/bot_logic_album.py
 
 [Install]
 WantedBy=multi-user.target
