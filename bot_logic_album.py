@@ -78,22 +78,22 @@ class VKAlbumSearcher:
 
         # find 2 groups of letters in re_group_and_album like "111111" and "222222"
         re_group_and_album_parts = re.match(r'-(\w+)_(\w+)', re_group_and_album_match)
-
+        print(re_group_and_album_parts.groups()[0])
         # raise if both reg exp are empty
         if not re_group_and_album or not re_group_and_album_parts:
             vk_group_bot.messages.send(
                 user_id=self.event.obj.from_id,
                 random_id=self.event.obj.random_id,
                 peer_id=GROUP,
-                message="Неккоректная ссылка. Пример корректной ссылки: https://vk.com/album-6923031_249426673."
+                message="Неккоректная ссылка на альбом. Пример корректной ссылки: https://vk.com/album-6923031_249426673."
             )
             raise ValueError("Not valid URL")
 
         self.group = re_group_and_album_parts.groups()[0]
         self.album = re_group_and_album_parts.groups()[1]
 
-        # print("Group: ", self.group, '\n',
-        #       "Album: ", self.album, '\n')
+        print("Group: ", self.group, '\n',
+              "Album: ", self.album, '\n')
 
     def get_album_comments(self):
 
@@ -106,7 +106,7 @@ class VKAlbumSearcher:
                 user_id=self.event.obj.from_id,
                 random_id=self.event.obj.random_id,
                 peer_id=GROUP,
-                message="Неккоректная ссылка. Пример корректной ссылки: https://vk.com/album-6923031_249426673."
+                message="Неккоректная ссылка на альбом. Пример корректной ссылки: https://vk.com/album-6923031_249426673."
             )
             raise ValueError("can't change int to str: ", VE)
 
@@ -180,9 +180,54 @@ class VKAlbumSearcher:
         self.get_album_comments()
         return self.find_in_comments()
 
+def find_all(query, event):
+    splitted_query = query.split()
+    url = splitted_query[0]
+    words = splitted_query[1:]
+    words_str = ''
+    for i in words:
+        words_str += ' ' + i
+
+    re_check = re.match(r'.+(albums)-(\d+)', url)
+
+    if not re_check:
+        vk_group_bot.messages.send(
+            user_id=event.obj.from_id,
+            random_id=event.obj.random_id,
+            peer_id=GROUP,
+            message="Неккоректная ссылка на альбомы группы. Пример корректной ссылки: https://vk.com/albums-104169151"
+        )
+        raise ValueError("Invalid url")
+
+    re_group_id = re.search(r'albums-(\w+)', url)
+    group_id = '-' + re_group_id.groups(0)[0]
+    response = vk.photos.getAlbums(owner_id=group_id)
+    print(group_id)
+    query_list = []
+    for i in response['items']:
+        query_list.append(f'https://vk.com/album{group_id}_' + str(i['id']) + words_str)
+    for i in query_list:
+        print(i)
+
+    for i in query_list:
+        searcher = VKAlbumSearcher(str(i).lower(), event)
+        msg = searcher.find()
+        for j in msg:
+            vk_group_bot.messages.send(
+                user_id=event.obj.from_id,
+                random_id=event.obj.random_id,
+                peer_id=GROUP,
+                message=j
+            )
+        time.sleep(1)
+
 # check if url contains "album"
-def is_url_valid(url):
-    r = re.search(r'album', url)
+def is_url_album(url):
+    r = re.search(r'album-', url)
+    return r
+
+def is_url_albums(url):
+    r = re.search(r'albums-', url)
     return r
 
 # longpoll vk listener loop
@@ -190,7 +235,7 @@ def listen():
 
     for event in longpoll.listen():
         if event.type == VkBotEventType.MESSAGE_NEW:
-            if is_url_valid(event.obj.text):
+            if is_url_album(event.obj.text):
 
                 # create searcher object and call main func
                 searcher = VKAlbumSearcher(str(event.obj.text).lower(), event)
@@ -202,7 +247,16 @@ def listen():
                         peer_id=GROUP,
                         message=i
                     )
+            elif is_url_albums(event.obj.text):
+                find_all(event.obj.text, event)
 
+                # for i in msg:
+                #     vk_group_bot.messages.send(
+                #         user_id=event.obj.from_id,
+                #         random_id=event.obj.random_id,
+                #         peer_id=GROUP,
+                #         message=i
+                #     )
             else:
                 vk_group_bot.messages.send(
                     user_id=event.obj.from_id,
