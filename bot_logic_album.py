@@ -70,10 +70,6 @@ class VKAlbumSearcher:
         for i in range(1, len(splitted_query_string)):
             self.words.append(splitted_query_string[i])
 
-        print("String: ", self.query_string, '\n',
-              "Url: ", self.url, '\n',
-              "Word: ", self.words, '\n')
-
     def find_group_and_album_url(self):
 
         # find any letters after "-" like "-111111_222222"
