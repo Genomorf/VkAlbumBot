@@ -214,7 +214,7 @@ def listen():
                     message='Неправильная ссылка на альбом. Корректный пример: https://vk.com/album-6923031_249426673'
                 )
 
-
+listen()
 # while True:
 #     try:
 #         time.sleep(1)
