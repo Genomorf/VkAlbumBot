@@ -8,7 +8,9 @@ import configparser
 config = configparser.ConfigParser()
 config.sections()
 config.read('config.ini')
-
+import sys
+sys.enc
+sys.setdefaultencoding('utf8')
 def auth_handler():
     #t wo factor auth
     key = input("Enter authentication code: ")
@@ -178,7 +180,8 @@ class VKAlbumSearcher:
                     if len(final_message) > 25:
                         final_message = [("Комментариев слишком много (больше 20), попробуйте сузить запрос.")]
                         return final_message
-                    final_message.append(f" {counter}:\n Запрос: {word}\n Текст: {str(comment)}\n Url: {str(url)}\n\n")
+                    final_message.append(counter)
+                    #final_message.append(f" {counter}:\n Запрос: {word}\n Текст: {str(comment)}\n Url: {str(url)}\n\n")
                     self.repeats.append(comment)
                     counter += 1
 
