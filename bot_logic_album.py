@@ -8,9 +8,7 @@ import configparser
 config = configparser.ConfigParser()
 config.sections()
 config.read('config.ini')
-import sys
-sys.enc
-sys.setdefaultencoding('utf8')
+
 def auth_handler():
     #t wo factor auth
     key = input("Enter authentication code: ")
