@@ -135,12 +135,7 @@ class VKAlbumSearcher:
         for i in response_part_2['items']:
             response[" \"" + i['text'].lower() + "\" "] = "https://vk.com/photo-" + str(self.group)\
                                             + '_' + str(i['id'])
-        # c = 1
-        # for i in response_part_2['items']:
-        #     print(c, ": ", i)
-        #     c += 1
 
-        #print(len(response))
         # check if response is empty
         if len(response) < 1:
             vk_group_bot.messages.send(
@@ -151,24 +146,12 @@ class VKAlbumSearcher:
             )
             raise ValueError("Response is empty")
 
-        # parse comments from json response
-        # result_dict = {}
-        # for i in response:
-        #     result_dict[i['text'].lower()] = "https://vk.com/photo-" + str(self.group)\
-        #                                    + '_' + str(i['pid'])
-
-        # for j in result_dict.items():
-        #     print(j)
-
         self.comments = response
 
     def find_in_comments(self):
 
         final_message = []
 
-        # find query words in response comments
-        # append to final message if find
-        # append to repeats list if find to not repeat comments
         counter = 1
 
         for word in self.words:
@@ -232,9 +215,9 @@ def listen():
                 )
 
 
-while True:
-    try:
-        time.sleep(1)
-        listen()
-    except Exception as e:
-        print("App crashed with ", e)
+# while True:
+#     try:
+#         time.sleep(1)
+#         listen()
+#     except Exception as e:
+#         print("App crashed with ", e)
