@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import vk_api
+
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 import re
 import time
@@ -193,12 +194,10 @@ def listen():
 
     for event in longpoll.listen():
         if event.type == VkBotEventType.MESSAGE_NEW:
-            a = event.obj.text
-            a = str(a).encode('utf-8')
-            if is_url_valid(a):
+            if is_url_valid(event.obj.text):
 
                 # create searcher object and call main func
-                searcher = VKAlbumSearcher(str(a).lower(), event)
+                searcher = VKAlbumSearcher(str(event.obj.text).lower(), event)
                 msg = searcher.find()
                 for i in msg:
                     vk_group_bot.messages.send(
