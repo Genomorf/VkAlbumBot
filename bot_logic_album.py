@@ -193,7 +193,8 @@ def listen():
 
     for event in longpoll.listen():
         if event.type == VkBotEventType.MESSAGE_NEW:
-            a = event.obj.text.encode('utf-8')
+            a = event.obj.text
+            a = str(a).encode('utf-8')
             if is_url_valid(a):
 
                 # create searcher object and call main func
