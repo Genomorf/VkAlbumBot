@@ -178,7 +178,7 @@ class VKAlbumSearcher:
                     if len(final_message) > 25:
                         final_message = [("Комментариев слишком много (больше 20), попробуйте сузить запрос.")]
                         return final_message
-                    final_message.append(f"⏩ {counter}:\n📌 Запрос: {word}\n💬 Текст: {str(comment)}\n📎 Url: {str(url)}\n\n")
+                    final_message.append(f" {counter}:\n Запрос: {word}\n Текст: {str(comment)}\n Url: {str(url)}\n\n")
                     self.repeats.append(comment)
                     counter += 1
 
