@@ -92,8 +92,8 @@ class VKAlbumSearcher:
         self.group = re_group_and_album_parts.groups()[0]
         self.album = re_group_and_album_parts.groups()[1]
 
-        print("Group: ", self.group, '\n',
-              "Album: ", self.album, '\n')
+        # print("Group: ", self.group, '\n',
+        #       "Album: ", self.album, '\n')
 
     def get_album_comments(self):
 
@@ -159,7 +159,7 @@ class VKAlbumSearcher:
                         final_message = [("Комментариев слишком много (больше 20), попробуйте сузить запрос.")]
                         return final_message
                     #final_message.append(counter)
-                    final_message.append(f" {counter}:\n Запрос: {word}\n Текст: {str(comment)}\n Url: {str(url)}\n\n")
+                    final_message.append(f"&#128204 {counter}:\n&#128270; Запрос: {word}\n&#128196; Текст: {str(comment)}\n&#128206; Url: {str(url)}\n\n")
                     self.repeats.append(comment)
                     counter += 1
 
@@ -211,10 +211,10 @@ def listen():
                     message='Неправильная ссылка на альбом. Корректный пример: https://vk.com/album-6923031_249426673'
                 )
 
-listen()
-# while True:
-#     try:
-#         time.sleep(1)
-#         listen()
-#     except Exception as e:
-#         print("App crashed with ", e)
+
+while True:
+    try:
+        time.sleep(1)
+        listen()
+    except Exception as e:
+        print("App crashed with ", e)
