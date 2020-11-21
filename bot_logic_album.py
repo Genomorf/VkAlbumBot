@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 import vk_api
-
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 import re
 import time
 import configparser
+
 # init config
 config = configparser.ConfigParser()
 config.sections()
 config.read('config.ini')
 
 def auth_handler():
-    #t wo factor auth
+    #two factor auth
     key = input("Enter authentication code: ")
     remember_device = True
     return key, remember_device
@@ -46,8 +46,9 @@ def send_message(event, text):
 # main class of comment searcher
 class VKAlbumSearcher:
 
-    def __init__(self, query_string, event, is_multiple, album_title=None):
+    def __init__(self, query_string, event, search_in_many_albums=False, album_title=None):
 
+        self.MAX_MESSAGES = 50
         self.group = ''
         self.album = ''
         self.url = ''
@@ -56,11 +57,14 @@ class VKAlbumSearcher:
         self.words = []
         self.repeats = []
         self.event = event
-        self.is_multiple = is_multiple
+        self.search_in_many_albums = search_in_many_albums
         if album_title:
             self.album_title = "Альбом: " + album_title + "\n"
+        else:
+            self.album_title = None
 
-    def split_url(self):
+
+    def split_query(self):
 
         splitted_query_string = self.query_string.split()
 
@@ -72,9 +76,13 @@ class VKAlbumSearcher:
                          )
             raise ValueError("Split failed")
 
+        return splitted_query_string
+
+    def get_url_from_query(self, splitted_query_string):
         # get url from query
         self.url = splitted_query_string[0]
 
+    def get_words_from_query(self, splitted_query_string):
         # get query words from query
         for i in range(1, len(splitted_query_string)):
             self.words.append(splitted_query_string[i])
@@ -87,8 +95,8 @@ class VKAlbumSearcher:
 
         # find 2 groups of letters in re_group_and_album like "111111" and "222222"
         re_group_and_album_parts = re.match(r'-(\w+)_(\w+)', re_group_and_album_match)
-        print(re_group_and_album_parts.groups()[0])
-        # raise if both reg exp are empty
+
+        # throw error if both reg exps are empty
         if not re_group_and_album or not re_group_and_album_parts:
             send_message(self.event,
                          "Неккоректная ссылка на альбом. Пример корректной ссылки:"
@@ -99,8 +107,8 @@ class VKAlbumSearcher:
         self.group = re_group_and_album_parts.groups()[0]
         self.album = re_group_and_album_parts.groups()[1]
 
-        print("Group: ", self.group, '\n',
-              "Album: ", self.album, '\n')
+        # print("Group: ", self.group, '\n',
+        #       "Album: ", self.album, '\n')
 
     def get_album_comments(self):
 
@@ -120,14 +128,21 @@ class VKAlbumSearcher:
 
         # main request from vk.com API
         try:
+            # comments under photos
             response_part_1 = tools.get_all_iter(method='photos.getAllComments', max_count=100, values={'owner_id': group_id, 'album_id': album_id})
+
+            # comments from photos
             response_part_2 = vk.photos.get(owner_id=group_id, album_id=album_id, count=900)
+
         except Exception as e:
             send_message(self.event,
                          "Не удалось получить комментарии к альбому."
                          )
             raise ValueError("Get album comments failed with: ", e)
+
         response = {}
+
+        # dictionary: {comment_text: https://vk.com/photo-(group_id)_(photo_id)}
         for i in response_part_1:
             response[" \"" + i['text'].lower() + "\" "] = "https://vk.com/photo-" + str(self.group)\
                                             + '_' + str(i['pid'])
@@ -135,10 +150,11 @@ class VKAlbumSearcher:
             response[" \"" + i['text'].lower() + "\" "] = "https://vk.com/photo-" + str(self.group)\
                                             + '_' + str(i['id'])
 
-        # check if response is empty
+        # check if album has no comments
         if len(response) < 1:
             send_message(self.event,
-                         "Комментарии в альбоме не найдены."
+                         f"{self.album_title + '. Комментарии' if self.album_title else 'Комментарии в альбоме'}"
+                         f" не найдены."
                          )
             raise ValueError("Response is empty")
 
@@ -148,23 +164,36 @@ class VKAlbumSearcher:
 
         final_message = []
 
+        # counter - is number at the beginning of final message
         counter = 1
 
+        # for every word in list find this word in comments
         for word in self.words:
             for comment, url in self.comments.items():
                 r = re.findall(f'{word}', comment)
+
+                # if word is found and comment was never sent -
+                # add comment, album title, counter and word to the final message
                 if r and (comment not in self.repeats):
-                    if len(final_message) > 25:
-                        final_message = [(f"{self.album_title + ' ' if self.album_title else ''}"
-                                         "Комментариев слишком много (больше 20), попробуйте сузить запрос.")]
-                        return final_message
-                    #final_message.append(counter)
-                    final_message.append(f"{self.album_title}&#128204; {counter}:\n&#128270; Запрос: {word}\n&#128196; Текст: {str(comment)}\n&#128206; Url: {str(url)}\n\n")
+                    final_message.append(f"{self.album_title if self.album_title else ''}&#128204; {counter}:\n&#128270; "
+                                         f"Запрос: {word}\n&#128196; Текст: {str(comment)}\n"
+                                         f"&#128206; Url: {str(url)}\n\n")
+
+                    # append commend to repeats list to not send similar messages
                     self.repeats.append(comment)
                     counter += 1
 
-        # check if empty
-        if not self.is_multiple:
+                    # check length of final message to not spam
+                    if len(final_message) > self.MAX_MESSAGES:
+                        final_message = [(f"{self.album_title + ' ' if self.album_title else ''}"
+                                         f"Комментариев слишком много (больше {self.MAX_MESSAGES}),"
+                                          f" попробуйте сузить запрос.")]
+                        return final_message
+
+        # skip this error if search in more than 1 album to prevent spam
+        if not self.search_in_many_albums:
+
+            # check if empty
             if len(final_message) < 1:
                 tmp = ''
                 for word in self.words:
@@ -175,36 +204,65 @@ class VKAlbumSearcher:
 
     def find(self):
         # main function
-        self.split_url()
+        splitted_query = self.split_query()
+        self.get_url_from_query(splitted_query)
+        self.get_words_from_query(splitted_query)
         self.find_group_and_album_url()
         self.get_album_comments()
         return self.find_in_comments()
 
-def find_all(query, event):
+def find_in_one_album(query, event):
+
+    searcher = VKAlbumSearcher(str(query).lower(), event)
+    msg = searcher.find()
+    for i in msg:
+        send_message(event, i)
+
+def find_in_many_albums(query, event):
+
     splitted_query = query.split()
     if len(splitted_query) < 2:
         send_message(event, "Неккоректный запрос. Пример корректного запроса:"
                             " https://vk.com/albums-104169151 питер"
                      )
         raise ValueError("Split failed")
+
+    # "https://vk.com/albums-104169151"
     url = splitted_query[0]
+
+    # check if url is similar to "https://vk.com/ (albums) - (104169151) " pattern
+    re_check = re.match(r'.+(albums)-(\d+)', url)
+    if not re_check:
+        send_message(event, "Неккоректная ссылка на альбомы группы."
+                            " Пример корректной ссылки: https://vk.com/albums-104169151"
+                     )
+        raise ValueError("Invalid url")
+
+    # find in query slice signs: "https://vk.com/albums-104169151 ( [ (0) - (10) ] ) query_words"
     re_find_slice = re.match(r'.+\s(\[(\d+)-(\d+)\])\s.+', query)
+
     words = []
     slice_1 = 0
     slice_2 = 0
     is_sliced = False
+
+    # if slice is found - init slice variables and words
     if re_find_slice:
         words += splitted_query[2:]
         slice_1 += int(re_find_slice.groups()[1])
         slice_2 += int(re_find_slice.groups()[2])
+
+        # check if slice variables are in the correct order
+        # words and f-string need to help user fix his query
         words_in_message = ''
         for i in words:
-            words_in_message += i + ', '
+            words_in_message += i.lower() + ', '
         if slice_1 > slice_2:
             send_message(event, "Неккоретный запрос. "
                                 "Пример корректного запроса: " +
                                 f"https://vk.com/albums-104169151 [{slice_2}-{slice_1}] {words_in_message[0:-2]}")
             raise ValueError("Slice failed")
+        # bool flag to change settings later
         is_sliced = True
     else:
         words += splitted_query[1:]
@@ -212,31 +270,29 @@ def find_all(query, event):
     for i in words:
         words_str += ' ' + i.lower()
 
-    re_check = re.match(r'.+(albums)-(\d+)', url)
-
-    if not re_check:
-        send_message(event, "Неккоректная ссылка на альбомы группы."
-                            " Пример корректной ссылки: https://vk.com/albums-104169151"
-                     )
-        raise ValueError("Invalid url")
-
+    # find group id: "https://vk.com/albums- (104169151)"
     re_group_id = re.search(r'albums-(\w+)', url)
     group_id = '-' + re_group_id.groups(0)[0]
+
     response = vk.photos.getAlbums(owner_id=group_id)
     query_list = {}
 
+    # choose only required albums if slice exists
+    # dict: {"https://vk.com/album-(group_id)_(photo_id) query_words" : album_title}
+    # e.g.: {"https://vk.com/album-6923031_2494266731 moscow spb" : album1}
     if is_sliced:
         for i in response['items'][slice_1: slice_2]:
             query_list[(f'https://vk.com/album{group_id}_' + str(i['id']) + words_str)] \
                 = i['title']
+    # choose all
     else:
         for i in response['items']:
             query_list[(f'https://vk.com/album{group_id}_' + str(i['id']) + words_str)] \
                 = i['title']
 
-    for i in query_list:
-        print(i)
-    print(len(query_list.items()))
+    # for i in query_list:
+    #     print(i)
+    # check if amount of albums is to high to not spam
     if len(query_list.items()) > 50:
         send_message(event,
                      "Слишком много альбомов - больше 50. Используйте выборку, например: "
@@ -245,10 +301,12 @@ def find_all(query, event):
 
     send_message(event, f"Выполняется поиск по {slice_2 if is_sliced else 'всем'} альбомам группы...")
 
-
+    # search_counter needs to change message if nothing was found
     search_counter = 0
-    for key, value in query_list.items():
-        searcher = VKAlbumSearcher(str(key).lower(), event, True, value)
+    # find comments with VKAlbumSearcher class in query_list.keys()
+    # query_list.values() are album titles and they need in information messages to user
+    for url_key, album_title_value in query_list.items():
+        searcher = VKAlbumSearcher(str(url_key).lower(), event, True, album_title_value)
         msg = searcher.find()
         for j in msg:
             send_message(event, j)
@@ -260,13 +318,10 @@ def find_all(query, event):
                  f"{'' if search_counter > 0 else 'Ничего не найдено.'}")
 
 
-
-# check if url contains "album"
+# check if url contains "album" or "albums
 def is_url_album(url):
     r = re.search(r'album-', url)
     return r
-
-
 def is_url_albums(url):
     r = re.search(r'albums-', url)
     return r
@@ -278,22 +333,17 @@ def listen():
     for event in longpoll.listen():
         if event.type == VkBotEventType.MESSAGE_NEW:
             if is_url_album(event.obj.text):
-
-                # create searcher object and call main func
-                searcher = VKAlbumSearcher(str(event.obj.text).lower(), event, False)
-                msg = searcher.find()
-                for i in msg:
-                    send_message(event, i)
+                find_in_one_album(event.obj.text, event)
 
             elif is_url_albums(event.obj.text):
-                find_all(event.obj.text, event)
+                find_in_many_albums(event.obj.text, event)
 
             else:
                 send_message(event, 'Неправильная ссылка на альбом. Корректный пример:'
                                     ' https://vk.com/album-6923031_249426673'
                              )
 
-
+# infinite loop for random crashes with error ignoring
 while True:
     try:
         time.sleep(1)
