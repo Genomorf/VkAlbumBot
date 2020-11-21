@@ -72,7 +72,7 @@ class VKAlbumSearcher:
         if len(splitted_query_string) < 2:
             send_message(self.event,
                          "Неккоректный запрос. Пример корректного запроса:"
-                         " https://vk.com/album-6923031_249426673 шум korg"
+                         " https://vk.com/album-6923031_249426673 мск питер"
                          )
             raise ValueError("Split failed")
 
@@ -326,22 +326,34 @@ def is_url_albums(url):
     r = re.search(r'albums-', url)
     return r
 
-
+import threading
 # longpoll vk listener loop
+def a(event):
+    if is_url_album(event.obj.text):
+        find_in_one_album(event.obj.text, event)
+
+    elif is_url_albums(event.obj.text):
+        find_in_many_albums(event.obj.text, event)
+
+    else:
+        send_message(event, 'Неправильная ссылка на альбом. Корректный пример:'
+                            ' https://vk.com/album-6923031_249426673')
 def listen():
 
     for event in longpoll.listen():
         if event.type == VkBotEventType.MESSAGE_NEW:
-            if is_url_album(event.obj.text):
-                find_in_one_album(event.obj.text, event)
-
-            elif is_url_albums(event.obj.text):
-                find_in_many_albums(event.obj.text, event)
-
-            else:
-                send_message(event, 'Неправильная ссылка на альбом. Корректный пример:'
-                                    ' https://vk.com/album-6923031_249426673'
-                             )
+            t1 = threading.Thread(target=a, args=(event,))
+            t1.start()
+            # if is_url_album(event.obj.text):
+            #     find_in_one_album(event.obj.text, event)
+            #
+            # elif is_url_albums(event.obj.text):
+            #     find_in_many_albums(event.obj.text, event)
+            #
+            # else:
+            #     send_message(event, 'Неправильная ссылка на альбом. Корректный пример:'
+            #                         ' https://vk.com/album-6923031_249426673'
+            #                  )
 
 # infinite loop for random crashes with error ignoring
 while True:
