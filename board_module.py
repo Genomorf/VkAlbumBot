@@ -8,30 +8,49 @@ class VKBoardSearcher:
 
     def __init__(self, query, event):
 
+        self.offset: int = 0
         self.group_id: str = ''
         self.topic_id: str = ''
         self.query: str = query.lower()
         self.comments: dict = {}
         self.url: str = ''
         self.words: list = []
+        self.words_str = ''
         self.event = event
         self.repeats: list = []
         self.MAX_MESSAGES: int = 50
+        self.is_sliced: bool = False
+        self.splitted_query: list = []
 
     def split_query(self):
 
-        splitted_query: list = self.query.split()
+        self.splitted_query = self.query.split()
 
         # must be 2 words in query: "url query"
-        if len(splitted_query) < 2:
+        if len(self.splitted_query) < 2:
             vk_module.send_message(self.event,
                                    "Неккоректный запрос. Пример корректного запроса:"
                                    " https://vk.com/topic-104169151_32651830 мск питер"
                                    )
             raise ValueError("Split failed board")
 
-        self.url = splitted_query[0]
-        self.words += splitted_query[1:]
+        self.url = self.splitted_query[0]
+
+
+    def find_slice(self):
+        re_find_slice = re.match(r'.+\s(\[(\d+)\])\s.+', self.query)
+        if re_find_slice:
+            self.offset = int(re_find_slice.groups()[1]) * 20
+            self.is_sliced = True
+
+    def fill_words_list(self):
+        if self.is_sliced:
+            self.words += self.splitted_query[2:]
+        else:
+            self.words += self.splitted_query[1:]
+        print(self.words)
+        for i in self.words:
+            self.words_str += i + ' '
 
     def find_group_and_board(self):
 
@@ -49,42 +68,56 @@ class VKBoardSearcher:
 
     def make_response(self):
 
-        comments_dict: dict = {}
-
         try:
-            response = vk_module.vk.board.getComments(group_id=self.group_id, topic_id=self.topic_id)
+            service_response = vk_module.vk.board.getComments(group_id=self.group_id, topic_id=self.topic_id)
         except Exception as e:
             vk_module.send_message(self.event,
                                    "Не удалось получить комментарии к обсуждению."
                                    )
             raise ValueError("Get board comments failed with: ", e)
 
-        for i in response['items']:
-            comments_dict[i['text']] = i['id']
+        all_comments_amount = service_response['count']
+        iterator: int = (all_comments_amount // 100) + 1
 
-        for comment, Id in comments_dict.items():
-            self.comments[comment] = f"https://vk.com/topic-" \
-                                     f"{self.group_id}_{self.topic_id}" \
-                                     f"?post={Id}"
-        for i in comments_dict.keys():
-            print(i)
+        for i in range(iterator):
+            try:
+                response = vk_module.vk.board.getComments(group_id=self.group_id,
+                                                          topic_id=self.topic_id,
+                                                          count=100, offset=self.offset
+                                                          )
+            except Exception as e:
+                vk_module.send_message(self.event,
+                                       "Не удалось получить комментарии к обсуждению."
+                                       )
+                raise ValueError("Get board comments failed with: ", e)
+
+            for item in response['items']:
+                self.comments[item['text'].lower()] = f"https://vk.com/topic-" \
+                                              f"{self.group_id}_{self.topic_id}?post="\
+                                              + str(item['id'])
+            if all_comments_amount - self.offset < 100:
+                self.offset += all_comments_amount - self.offset
+            else:
+                self.offset += 100
+
+
+
     def find_words_in_comments(self):
         final_message: list = []
         counter = 1
         for word in self.words:
             for comment, url in self.comments.items():
-                r = re.findall(f'{word}', comment)
+                r = re.findall(word, comment)
                 if r and (comment not in self.repeats):
-                    final_message.append((f"&#128204; {counter}:\n&#128270; "
+                    final_message.append(f"&#128204; {counter}:\n&#128270; "
                                           f"Запрос: {word}\n&#128196; Текст: {str(comment)}\n"
-                                          f"&#128206; Url: {str(url)}\n\n"))
-                    counter +=1
+                                          f"&#128206; Url: {str(url)}\n\n")
+                    counter += 1
                     self.repeats.append(comment)
                     if len(final_message) > self.MAX_MESSAGES:
                         final_message = [(f"Комментариев слишком много (больше {self.MAX_MESSAGES}),"
                                           f" попробуйте сузить запрос.")]
                         return final_message
-
         if len(final_message) < 1:
             tmp = ''
             for word in self.words:
@@ -95,6 +128,8 @@ class VKBoardSearcher:
 
     def find(self):
         self.split_query()
+        self.find_slice()
+        self.fill_words_list()
         self.find_group_and_board()
         self.make_response()
         return self.find_words_in_comments()

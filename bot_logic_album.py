@@ -21,23 +21,25 @@ def find_in_one_album(query, event):
             buffer = ''
     if buffer:
         vk_module.send_message(event, buffer)
-    vk_module.send_message(event, "Поиск завершен")
+    vk_module.send_message(event, "Поиск завершен.")
 
 
-# def find_in_one_topic(query,  event):
-#
-#     searcher = board_module.VKBoardSearcher(str(query).lower(), event)
-#     msg = searcher.find()
-#
-#     buffer = ''
-#     for i in msg:
-#         buffer += i
-#         if len(buffer) > 4000:
-#             vk_module.send_message(event, buffer)
-#             buffer = ''
-#     if buffer:
-#         vk_module.send_message(event, buffer)
-#
+def find_in_one_topic(query,  event):
+
+    searcher = board_module.VKBoardSearcher(str(query).lower(), event)
+    msg = searcher.find()
+    words = searcher.words_str
+    vk_module.send_message(event, f"Выполняется поиск '{words}' в обсуждении...")
+    buffer = ''
+    for i in msg:
+        buffer += i
+        if len(buffer) > 4000:
+            vk_module.send_message(event, buffer)
+            buffer = ''
+    if buffer:
+        vk_module.send_message(event, buffer)
+    vk_module.send_message(event, "Поиск завершен.")
+
 
 def find_in_many_albums(query, event):
 
@@ -166,8 +168,8 @@ def answer(event):
     elif type_of_request(event.obj.text) == 'albums':
         find_in_many_albums(event.obj.text, event)
 
-    # elif type_of_request(event.obj.text) == 'topic':
-    #     find_in_one_topic(event.obj.text, event)
+    elif type_of_request(event.obj.text) == 'topic':
+        find_in_one_topic(event.obj.text, event)
     else:
         vk_module.send_message(event, 'Неправильная ссылка на альбом. Корректный пример:'
                                       ' https://vk.com/album-6923031_249426673')
