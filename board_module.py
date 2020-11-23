@@ -106,9 +106,7 @@ class VKBoardSearcher:
             else:
                 self.offset += 100
         c = 1
-        for i in self.comments:
-            print(c, ':', i)
-            c += 1
+
 
     def find_words_in_comments(self):
         final_message: list = []
