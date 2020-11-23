@@ -3,7 +3,7 @@ import re
 # main class of comment searcher
 class VKAlbumSearcher:
 
-    def __init__(self, query_string, event, search_in_many_albums=False, album_title=None):
+    def __init__(self, query_string, event):
 
         self.MAX_MESSAGES = 50
         self.group = ''
@@ -15,11 +15,6 @@ class VKAlbumSearcher:
         self.words_str = ''
         self.repeats = []
         self.event = event
-        self.search_in_many_albums = search_in_many_albums
-        if album_title:
-            self.album_title = "Альбом: " + album_title + "\n"
-        else:
-            self.album_title = None
 
     def split_query(self):
 
@@ -114,8 +109,7 @@ class VKAlbumSearcher:
         # check if album has no comments
         if len(response) < 1:
             vk_module.send_message(self.event,
-                         f"{self.album_title + '. Комментарии' if self.album_title else 'Комментарии в альбоме'}"
-                         f" не найдены."
+                         f"Комментарии в альбоме не найдены."
                          )
             raise ValueError("Response is empty")
 
@@ -136,8 +130,7 @@ class VKAlbumSearcher:
                 # if word is found and comment was never sent -
                 # add comment, album title, counter and word to the final message
                 if r and (comment not in self.repeats):
-                    final_message.append(f"{self.album_title if self.album_title else ''}"
-                                         f"&#128204; {counter}:\n&#128270; "
+                    final_message.append(f"&#128204; {counter}:\n&#128270; "
                                          f"Запрос: {word}\n&#128196; Текст: {str(comment)}\n"
                                          f"&#128206; Url: {str(url)}\n\n")
 
@@ -147,20 +140,18 @@ class VKAlbumSearcher:
 
                     # check length of final message to not spam
                     if len(final_message) > self.MAX_MESSAGES:
-                        final_message = [(f"{self.album_title + ' ' if self.album_title else ''}"
-                                         f"Комментариев слишком много (больше {self.MAX_MESSAGES}),"
+                        final_message = [(f"Комментариев слишком много (больше {self.MAX_MESSAGES}),"
                                           f" попробуйте сузить запрос.")]
                         return final_message
 
         # skip this error if search in more than 1 album to prevent spam
-        if not self.search_in_many_albums:
 
-            # check if empty
-            if len(final_message) < 1:
-                tmp = ''
-                for word in self.words:
-                    tmp += word + ', '
-                final_message.append(f"Комментарии по запросу '{tmp[0:-2]}' не найдены.")
+        # check if empty
+        if len(final_message) < 1:
+            tmp = ''
+            for word in self.words:
+                tmp += word + ', '
+            final_message.append(f"Комментарии по запросу '{tmp[0:-2]}' не найдены.")
 
         return final_message
 
