@@ -1,6 +1,4 @@
 import vk_module
-
-
 import re
 
 
@@ -40,7 +38,12 @@ class VKBoardSearcher:
     def find_slice(self):
         re_find_slice = re.match(r'.+\s(\[(\d+)\])\s.+', self.query)
         if re_find_slice:
-            self.offset = int(re_find_slice.groups()[1]) * 20
+            if int(re_find_slice.groups()[1]) == 0:
+                vk_module.send_message(self.event, 'Нумерация страниц в обсуждении начинается'
+                                                   ' с 1.Пример: https://vk.com/topic-104169151_38767969'
+                                                   f' [1] запрос')
+                raise ValueError("Slice is 0")
+            self.offset = (int(re_find_slice.groups()[1]) - 1) * 20
             self.is_sliced = True
 
     def fill_words_list(self):
@@ -48,7 +51,6 @@ class VKBoardSearcher:
             self.words += self.splitted_query[2:]
         else:
             self.words += self.splitted_query[1:]
-        print(self.words)
         for i in self.words:
             self.words_str += i + ' '
 
@@ -75,10 +77,14 @@ class VKBoardSearcher:
                                    "Не удалось получить комментарии к обсуждению."
                                    )
             raise ValueError("Get board comments failed with: ", e)
-
+        number_of_pages = int((service_response['count'] - 1) / 20) + 1
+        if int((self.offset + 21) / 20) > number_of_pages:
+            vk_module.send_message(self.event, 'Такой страницы не существует. '
+                                               f'Всего страниц в обсуждении:'
+                                               f' {number_of_pages}.')
+            raise ValueError("Page doesn't exist")
         all_comments_amount = service_response['count']
         iterator: int = (all_comments_amount // 100) + 1
-
         for i in range(iterator):
             try:
                 response = vk_module.vk.board.getComments(group_id=self.group_id,
@@ -99,8 +105,10 @@ class VKBoardSearcher:
                 self.offset += all_comments_amount - self.offset
             else:
                 self.offset += 100
-
-
+        c = 1
+        for i in self.comments:
+            print(c, ':', i)
+            c += 1
 
     def find_words_in_comments(self):
         final_message: list = []
