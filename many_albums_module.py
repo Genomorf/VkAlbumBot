@@ -47,11 +47,11 @@ class VKManyAlbumsSearcher:
         if re_find_slice:
             self.is_sliced = True
             self.slices += [int(re_find_slice.groups()[1]), int(re_find_slice.groups()[2])]
-            if self.slices[1] > self.slices[2]:
+            if self.slices[1] > self.slices[0]:
                 vk_module.send_message(self.event, "Неккоретный запрос. "
                                               "Пример корректного запроса: " +
                                               f"https://vk.com/albums-104169151 "
-                                              f"[{self.slices[2]}-{self.slices[1]}] {self.words_str}")
+                                              f"[{self.slices[0]}-{self.slices[1]}] {self.words_str}")
                 raise ValueError("Slice failed")
     def get_words(self, splitted_query):
         if self.is_sliced:
