@@ -148,7 +148,7 @@ class VKManyAlbumsSearcher:
                         final_message.append(f"Альбом: {self.album_titles[album_id]}"
                                              f"&#128204; {counter}:\n&#128270; "
                                              f"Запрос: {word}\n&#128196; Текст: {str(comment['text'].lower())}\n"
-                                             f"&#128206; Url: 'https://vk.com/photo"
+                                             f"&#128206; Url: https://vk.com/photo"
                                              f"{self.group_id}_{str(comment['id'])}\n\n")
 
                         # append commend to repeats list to not send similar messages
