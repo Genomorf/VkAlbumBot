@@ -26,7 +26,6 @@ class VKManyAlbumsSearcher:
                                           " https://vk.com/albums-104169151 питер"
                                    )
             raise ValueError("Split failed")
-        print(self.query, splitted_query)
 
         return splitted_query
     def get_url(self, splitted_query):
@@ -38,19 +37,16 @@ class VKManyAlbumsSearcher:
                                           " Пример корректной ссылки: https://vk.com/albums-104169151"
                                    )
             raise ValueError("Invalid url")
-        print(self.url, re_check)
     def get_group_id(self):
         # find group id: "https://vk.com/albums- (104169151)"
         re_group_id = re.search(r'albums-(\w+)', self.url)
         self.group_id = '-' + re_group_id.groups(0)[0]
-        print(re_group_id, self.group_id)
     def find_slice(self):
         re_find_slice = re.match(r'.+\s(\[(\d+)-(\d+)\])\s.+', self.query)
         self.slices = []
         if re_find_slice:
             self.is_sliced = True
             self.slices += [int(re_find_slice.groups()[1]), int(re_find_slice.groups()[2])]
-        print(re_find_slice, self.slices)
     def get_words(self, splitted_query):
         if self.is_sliced:
             self.words += splitted_query[2:]
@@ -58,7 +54,6 @@ class VKManyAlbumsSearcher:
             self.words += splitted_query[1:]
         for i in self.words:
             self.words_str += i.lower() + " "
-        print(self.words, self.words_str)
     def make_slice(self, query, event):
 
         slice_1 = self.slices[0]
@@ -98,8 +93,7 @@ class VKManyAlbumsSearcher:
                 query_list.append(i["id"])
                 self.amount_of_albums += 1
 
-        for i in query_list:
-            print(i)
+
         # check if amount of albums is to high to not spam
         if len(query_list) > 50:
             vk_module.send_message(self.event,
@@ -126,7 +120,6 @@ class VKManyAlbumsSearcher:
                                               {'owner_id': self.group_id, 'album_id': album, 'count': 900})
             counter[0] += 10
             counter[1] += 10
-            print(counter)
         for album, response in self.response_comments.items():
             self.response_comments[album] = response.result
 
@@ -134,12 +127,7 @@ class VKManyAlbumsSearcher:
             response_photos[album] = response.result
 
         self.response_comments.update(response_photos)
-        for i, j in self.response_comments.items():
-            print(i, j)
-        print(len(self.response_comments))
-        for i in self.response_comments.values():
-            for j in i['items']:
-                print(j['text'])
+
 
     def find_comments(self):
         counter = 1
@@ -169,7 +157,6 @@ class VKManyAlbumsSearcher:
                 tmp += word + ', '
             final_message.append(f"Комментарии по запросу '{tmp[0:-2]}' не найдены.")
 
-        print(final_message)
         return final_message
 
         # vk_module.send_message(self.event, f"Выполняется поиск по "
