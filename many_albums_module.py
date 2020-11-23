@@ -47,12 +47,7 @@ class VKManyAlbumsSearcher:
         if re_find_slice:
             self.is_sliced = True
             self.slices += [int(re_find_slice.groups()[1]), int(re_find_slice.groups()[2])]
-            if self.slices[0] > self.slices[1]:
-                vk_module.send_message(self.event, "Неккоретный запрос. "
-                                              "Пример корректного запроса: " +
-                                              f"https://vk.com/albums-104169151 "
-                                              f"[{self.slices[1]}-{self.slices[0]}] {self.words_str}")
-                raise ValueError("Slice failed")
+
     def get_words(self, splitted_query):
         if self.is_sliced:
             self.words += splitted_query[2:]
@@ -60,6 +55,13 @@ class VKManyAlbumsSearcher:
             self.words += splitted_query[1:]
         for i in self.words:
             self.words_str += i.lower() + " "
+        if self.is_sliced:
+            if self.slices[0] > self.slices[1]:
+                vk_module.send_message(self.event, "Неккоретный запрос. "
+                                              "Пример корректного запроса: " +
+                                              f"https://vk.com/albums-104169151 "
+                                              f"[{self.slices[1]}-{self.slices[0]}] {self.words_str}")
+                raise ValueError("Slice failed")
     def make_slice(self, query, event):
 
         slice_1 = self.slices[0]
