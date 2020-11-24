@@ -6,7 +6,7 @@ import configparser
 # init config
 config = configparser.ConfigParser()
 config.sections()
-config.read('config.ini')
+config.read('C:\\Users\\Alex\\PycharmProjects\\VkAlbumBot\\config.ini')
 
 
 def auth_handler():

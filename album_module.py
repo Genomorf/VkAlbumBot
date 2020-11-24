@@ -82,13 +82,26 @@ class VKAlbumSearcher:
 
         # main request from vk.com API
         try:
+            # for i in range(iterator):
+            #     with vk_module.vk_api.VkRequestsPool(vk_module.vk_admin) as pool:
+            #         for album in query_list[counter[0]: counter[1]]:
             # comments under photos
-            response_part_1 = tools.get_all_iter(method='photos.getAllComments',
-                                                 max_count=100,
-                                                 values={'owner_id': group_id, 'album_id': album_id})
+            pools1 = {}
+            pools2 = {}
+            with vk_module.vk_api.VkRequestsPool(vk_module.vk_admin) as pool:
 
-            # comments from photos
-            response_part_2 = vk_module.vk.photos.get(owner_id=group_id, album_id=album_id, count=900)
+                    pools1['first'] = pool.method('photos.getAllComments',
+                                                                     {'owner_id': group_id, 'album_id': album_id,
+                                                                      'max_count': 100})
+                    pools2['second'] = pool.method('photos.get',
+                                                              {'owner_id': group_id, 'album_id': album_id,
+                                                               'count': 900})
+            # response_part_1 = tools.get_all_iter(method='photos.getAllComments',
+            #                                      max_count=100,
+            #                                      values={'owner_id': group_id, 'album_id': album_id})
+            #
+            # # comments from photos
+            # response_part_2 = vk_module.vk.photos.get(owner_id=group_id, album_id=album_id, count=900)
 
         except Exception as e:
             vk_module.send_message(self.event,
@@ -97,9 +110,17 @@ class VKAlbumSearcher:
             raise ValueError("Get album comments failed with: ", e)
 
         response = {}
+        for album, a in pools1.items():
+            pools1[album] = a.result
+
+        for album, a in pools2.items():
+            pools2[album] = a.result
+
+        response_part_1 = pools1['first']
+        response_part_2 = pools2['second']
 
         # dictionary: {comment_text: https://vk.com/photo-(group_id)_(photo_id)}
-        for i in response_part_1:
+        for i in response_part_1['items']:
             response[f" \"{i['text'].lower()}\" "] = f"https://vk.com/photo-{str(self.group)}"\
                                                      f"_{str(i['pid'])}"
         for i in response_part_2['items']:

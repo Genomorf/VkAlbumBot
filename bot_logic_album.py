@@ -8,11 +8,10 @@ import board_module
 import many_albums_module
 
 def find_in_one_album(query, event):
+    vk_module.send_message(event, f"Выполняется поиск слов в альбоме...")
 
     searcher = album_module.VKAlbumSearcher(str(query).lower(), event)
     msg = searcher.find()
-    words = searcher.words_str
-    vk_module.send_message(event, f"Выполняется поиск '{words}' в альбоме...")
     buffer = ''
     for i in msg:
         buffer += i
@@ -24,12 +23,10 @@ def find_in_one_album(query, event):
     vk_module.send_message(event, "Поиск завершен.")
 
 def find_in_many_albums(query, event):
+
+    vk_module.send_message(event, f"Выполняется поиск слов в альбомах...")
     searcher = many_albums_module.VKManyAlbumsSearcher(str(query).lower(), event)
     msg = searcher.find()
-    words = searcher.words_str
-    vk_module.send_message(event, f"Выполняется поиск '{words}' в "
-                                  f"{searcher.slices[1] if searcher.is_sliced else ''}"
-                                  f" альбомах...")
     buffer = ''
     for i in msg:
         buffer += i
@@ -41,11 +38,10 @@ def find_in_many_albums(query, event):
     vk_module.send_message(event, "Поиск завершен.")
 
 def find_in_one_topic(query,  event):
-
+    vk_module.send_message(event, f"Выполняется поиск слов в обсуждении...")
     searcher = board_module.VKBoardSearcher(str(query).lower(), event)
     msg = searcher.find()
     words = searcher.words_str
-    vk_module.send_message(event, f"Выполняется поиск '{words}' в обсуждении...")
     buffer = ''
     for i in msg:
         buffer += i
