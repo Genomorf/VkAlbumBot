@@ -100,11 +100,11 @@ class VKAlbumSearcher:
 
         # dictionary: {comment_text: https://vk.com/photo-(group_id)_(photo_id)}
         for i in response_part_1:
-            response[" \"" + i['text'].lower() + "\" "] = "https://vk.com/photo-" + str(self.group)\
-                                            + '_' + str(i['pid'])
+            response[f" \"{i['text'].lower()}\" "] = f"https://vk.com/photo-{str(self.group)}"\
+                                                     f"_{str(i['pid'])}"
         for i in response_part_2['items']:
-            response[" \"" + i['text'].lower() + "\" "] = "https://vk.com/photo-" + str(self.group)\
-                                            + '_' + str(i['id'])
+            response[f" \"{i['text'].lower()}\" "] = f"https://vk.com/photo-{str(self.group)}"\
+                                                     f"_{str(i['id'])}"
 
         # check if album has no comments
         if len(response) < 1:

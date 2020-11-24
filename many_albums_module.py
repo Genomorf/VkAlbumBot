@@ -54,7 +54,7 @@ class VKManyAlbumsSearcher:
         else:
             self.words += splitted_query[1:]
         for i in self.words:
-            self.words_str += i.lower() + " "
+            self.words_str += f"{i.lower()} "
         if self.is_sliced:
             if self.slices[0] > self.slices[1]:
                 vk_module.send_message(self.event, "Неккоретный запрос. "
