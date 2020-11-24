@@ -1,6 +1,6 @@
 import vk_module
 import re
-
+import time
 
 class VKBoardSearcher:
 
@@ -19,6 +19,7 @@ class VKBoardSearcher:
         self.MAX_MESSAGES: int = 50
         self.is_sliced: bool = False
         self.splitted_query: list = []
+        self.date_dict: dict = {}   # <- terrible way of date obtaining
 
     def split_query(self):
 
@@ -101,21 +102,26 @@ class VKBoardSearcher:
                 self.comments[item['text'].lower()] = f"https://vk.com/topic-" \
                                               f"{self.group_id}_{self.topic_id}?post="\
                                               + str(item['id'])
+                self.date_dict[item['text'].lower()] = item['date']
             if all_comments_amount - self.offset < 100:
                 self.offset += all_comments_amount - self.offset
             else:
                 self.offset += 100
-        c = 1
-
 
     def find_words_in_comments(self):
+
+        # terrible algorithm
+        for i, date in self.date_dict.items():
+            t = time.localtime(date)
+            date_res = f"{t.tm_mday} {months[t.tm_mon]} {t.tm_year} в {t.tm_hour}:{t.tm_min}"
+            self.date_dict[i] = date_res
         final_message: list = []
         counter = 1
         for word in self.words:
             for comment, url in self.comments.items():
                 r = re.findall(word, comment)
                 if r and (comment not in self.repeats):
-                    final_message.append(f"&#128204; {counter}:\n&#128270; "
+                    final_message.append(f"&#128204; {counter}: {self.date_dict[comment]}\n&#128270; "
                                           f"Запрос: {word}\n&#128196; Текст: {str(comment)}\n"
                                           f"&#128206; Url: {str(url)}\n\n")
                     counter += 1
@@ -139,5 +145,18 @@ class VKBoardSearcher:
         self.find_group_and_board()
         self.make_response()
         return self.find_words_in_comments()
-
+months = {
+    1: 'янв',
+    2: 'фев',
+    3: 'мар',
+    4: 'апр',
+    5: 'май',
+    6: 'июн',
+    7: 'июл',
+    8: 'авг',
+    9: 'сент',
+    10: 'окт',
+    11: 'нояб',
+    12: 'дек'
+}
 
