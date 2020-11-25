@@ -7,53 +7,49 @@ import album_module
 import board_module
 import many_albums_module
 
-def find_in_one_album(query, event):
+
+def send(msg: list, event):
+    buffer: str = ''
+    for i in msg:
+        buffer += i
+        if len(buffer) > 3000:
+            vk_module.send_message(event, buffer)
+            buffer = ''
+    if buffer:
+        vk_module.send_message(event, buffer)
+
+
+def find_in_one_album(query: str, event) -> None:
     vk_module.send_message(event, f"Выполняется поиск слов в альбоме...")
 
     searcher = album_module.VKAlbumSearcher(str(query).lower(), event)
-    msg = searcher.find()
-    buffer = ''
-    for i in msg:
-        buffer += i
-        if len(buffer) > 3000:
-            vk_module.send_message(event, buffer)
-            buffer = ''
-    if buffer:
-        vk_module.send_message(event, buffer)
+    msg: list = searcher.find()
+    send(msg, event)
+
     vk_module.send_message(event, "Поиск завершен.")
 
-def find_in_many_albums(query, event):
 
+def find_in_many_albums(query: str, event) -> None:
     vk_module.send_message(event, f"Выполняется поиск слов в альбомах...")
+
     searcher = many_albums_module.VKManyAlbumsSearcher(str(query).lower(), event)
-    msg = searcher.find()
-    buffer = ''
-    for i in msg:
-        buffer += i
-        if len(buffer) > 3000:
-            vk_module.send_message(event, buffer)
-            buffer = ''
-    if buffer:
-        vk_module.send_message(event, buffer)
+    msg: list = searcher.find()
+    send(msg, event)
+
     vk_module.send_message(event, "Поиск завершен.")
 
-def find_in_one_topic(query,  event):
+
+def find_in_one_topic(query: str,  event)-> None:
     vk_module.send_message(event, f"Выполняется поиск слов в обсуждении...")
+
     searcher = board_module.VKBoardSearcher(str(query).lower(), event)
-    msg = searcher.find()
-    words = searcher.words_str
-    buffer = ''
-    for i in msg:
-        buffer += i
-        if len(buffer) > 3000:
-            vk_module.send_message(event, buffer)
-            buffer = ''
-    if buffer:
-        vk_module.send_message(event, buffer)
+    msg: list = searcher.find()
+    send(msg, event)
+
     vk_module.send_message(event, "Поиск завершен.")
 
 
-def type_of_request(url):
+def type_of_request(url: str) -> str:
     r1 = re.search(r'album-', url)
     if r1: return 'album'
     r2 = re.search(r'albums-', url)
@@ -63,7 +59,7 @@ def type_of_request(url):
 
 
 # longpoll vk listener loop
-def answer(event):
+def answer(event) -> None:
 
     if type_of_request(event.obj.text) == 'album':
         find_in_one_album(event.obj.text, event)
@@ -78,7 +74,7 @@ def answer(event):
                                       ' https://vk.com/album-6923031_249426673')
 
 
-def listen():
+def listen() -> None:
 
     for event in vk_module.longpoll.listen():
         if event.type == vk_module.VkBotEventType.MESSAGE_NEW:
