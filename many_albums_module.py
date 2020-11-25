@@ -117,7 +117,6 @@ class VKManyAlbumsSearcher:
         # get album titles from response
         for i in response['items']:
             self.album_titles[str(i['id'])] = str(i['title'])
-        print(response)
         query_list: list = []
 
         '''
